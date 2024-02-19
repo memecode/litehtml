@@ -168,7 +168,7 @@ else()
     add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-add_library(${PROJECT_NAME} ${SOURCE_LITEHTML})
+add_library(${PROJECT_NAME} ${SOURCE_LITEHTML} ${HEADER_LITEHTML})
 set_target_properties(${PROJECT_NAME} PROPERTIES VERSION ${PROJECT_LIB_VERSION} SOVERSION ${PROJECT_SO_VERSION})
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
