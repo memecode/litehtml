@@ -9,12 +9,38 @@
 
 namespace litehtml
 {
+	class gradient
+	{
+	public:
+		enum gradient_type
+		{
+			no_gradient,
+			linear_gradient,
+			radial_gradient,
+		};
+		gradient_type		m_type = no_gradient;
+		web_color_vector	m_colors;
+
+		gradient(gradient_type type = no_gradient)
+		{
+			m_type = type;
+		}
+
+		bool is_empty() const
+		{
+			return m_type == no_gradient || m_colors.size() == 0;
+		}
+
+		static gradient transparent;
+	};
+
 	class background
 	{
 	public:
 		string_vector			m_image;
 		string					m_baseurl;
 		web_color				m_color;
+		gradient				m_gradient;
 		int_vector				m_attachment;
 		length_vector			m_position_x;
 		length_vector			m_position_y;
@@ -25,8 +51,10 @@ namespace litehtml
 
 		bool is_empty() const
 		{
-			if(m_color.alpha != 0) return false;
-			if(m_image.empty()) return true;
+			if(m_color.alpha != 0 || m_gradient.m_type != gradient::no_gradient)
+				return false;
+			if(m_image.empty())
+				return true;
 			for(const auto& img : m_image)
 			{
 				if(!img.empty()) return false;
@@ -43,6 +71,7 @@ namespace litehtml
 		background_attachment	attachment;
 		background_repeat		repeat;
 		web_color				color;
+		gradient				gradient;
 		position				clip_box;
 		position				origin_box;
 		position				border_box;

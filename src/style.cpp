@@ -623,6 +623,7 @@ void style::parse_background(const string& val, const string& baseurl, bool impo
 	int_vector repeats, origins, clips, attachments;
 	length_vector x_positions, y_positions;
 	size_vector sizes;
+	gradient grad;
 
 	for (const auto& token : tokens)
 	{
@@ -631,6 +632,7 @@ void style::parse_background(const string& val, const string& baseurl, bool impo
 			return;
 		
 		color = bg.m_color;
+		grad = bg.m_gradient;
 		images.push_back(bg.m_image[0]);
 		repeats.push_back(bg.m_repeat[0]);
 		origins.push_back(bg.m_origin[0]);
@@ -642,6 +644,7 @@ void style::parse_background(const string& val, const string& baseurl, bool impo
 	}
 
 	add_parsed_property(_background_color_,			property_value(color,		important));
+	add_parsed_property(_background_gradient_,		property_value(grad,		important));
 	add_parsed_property(_background_image_,			property_value(images,		important));
 	add_parsed_property(_background_image_baseurl_, property_value(baseurl,		important));
 	add_parsed_property(_background_repeat_,		property_value(repeats,		important));
@@ -691,17 +694,20 @@ bool style::parse_one_background(const string& val, document_container* containe
 			css::parse_css_url(token, url);
 			bg.m_image = { url };
 			image_found = true;
-		} else if( (idx = value_index(token, background_repeat_strings)) >= 0 )
+		}
+		else if( (idx = value_index(token, background_repeat_strings)) >= 0 )
 		{
 			if (repeat_found) return false;
 			bg.m_repeat = { idx };
 			repeat_found = true;
-		} else if( (idx = value_index(token, background_attachment_strings)) >= 0 )
+		}
+		else if( (idx = value_index(token, background_attachment_strings)) >= 0 )
 		{
 			if (attachment_found) return false;
 			bg.m_attachment = { idx };
 			attachment_found = true;
-		} else if( (idx = value_index(token, background_box_strings)) >= 0 )
+		}
+		else if( (idx = value_index(token, background_box_strings)) >= 0 )
 		{
 			if(!origin_found)
 			{
@@ -713,7 +719,8 @@ bool style::parse_one_background(const string& val, document_container* containe
 				bg.m_clip = { idx };
 				clip_found = true;
 			}
-		} else if(	value_in_list(token, background_position_strings) ||
+		}
+		else if(	value_in_list(token, background_position_strings) ||
 					token.find('/') != string::npos ||
 					t_isdigit(token[0]) ||
 					token[0] == '+'	||
@@ -721,11 +728,31 @@ bool style::parse_one_background(const string& val, document_container* containe
 					token[0] == '.' )
 		{
 			position += " " + token;
-		} else if (web_color::is_color(token, container))
+		}
+		else if (web_color::is_color(token, container))
 		{
 			if (color_found) return false;
 			bg.m_color = web_color::from_string(token, container);
 			color_found = true;
+		}
+		else if (token.substr(0, 15) == "linear-gradient")
+		{
+			string_vector gradient;
+			split_string(token, gradient, "()", "", "");
+			if (gradient.size() == 2)
+			{
+				auto arg = gradient[1];
+
+				bg.m_gradient.m_type = gradient::linear_gradient;
+
+				string_vector colors;
+				split_string(gradient[1], colors, ", ");
+				for (auto c: colors)
+				{
+					if (web_color::is_color(c, container))
+						bg.m_gradient.m_colors.push_back(web_color::from_string(c, container));
+				}
+			}
 		}
 		else
 		{

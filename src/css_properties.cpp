@@ -360,6 +360,11 @@ void litehtml::css_properties::compute_background(const element* el, const docum
 	int font_size = get_font_size();
 
 	m_bg.m_color		= el->get_color_property(_background_color_, false, web_color::transparent, offset(m_bg.m_color));
+	m_bg.m_gradient		= el->get_gradient_property(_background_gradient_, false, gradient::transparent, offset(m_bg.m_gradient));
+	if (!m_bg.m_gradient.is_empty())
+	{
+		int asd=0;
+	}
 
 	const css_size auto_auto(css_length::predef_value(background_size_auto), css_length::predef_value(background_size_auto));
 	m_bg.m_position_x	= el->get_length_vector_property(_background_position_x_, false, { css_length(0, css_units_percentage) }, offset(m_bg.m_position_x));

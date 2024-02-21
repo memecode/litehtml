@@ -382,6 +382,11 @@ litehtml::web_color litehtml::html_tag::get_color_property(string_id name, bool 
 	return get_property_impl<web_color, prop_type_color, &property_value::m_color>(name, inherited, default_value, css_properties_member_offset);
 }
 
+litehtml::gradient litehtml::html_tag::get_gradient_property(string_id name, bool inherited, litehtml::gradient default_value, uint_ptr css_properties_member_offset) const
+{
+	return get_property_impl<gradient, prop_type_gradient, &property_value::m_gradient>(name, inherited, default_value, css_properties_member_offset);
+}
+
 litehtml::string litehtml::html_tag::get_string_property(string_id name, bool inherited, const string& default_value, uint_ptr css_properties_member_offset) const
 {
 	return get_property_impl<string, prop_type_string, &property_value::m_string>(name, inherited, default_value, css_properties_member_offset);
@@ -1113,6 +1118,7 @@ void litehtml::html_tag::init_background_paint(position pos, std::vector<backgro
 	}
 
 	bg_paint.back().color = bg->m_color;
+	bg_paint.back().gradient = bg->m_gradient;
 }
 
 void litehtml::html_tag::init_one_background_paint(int i, position pos, background_paint& bg_paint, const background* bg, const std::shared_ptr<render_item>& ri)

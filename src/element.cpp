@@ -461,6 +461,7 @@ int				element::get_enum_property			(string_id /*name*/, bool /*inherited*/, int
 int				element::get_int_property			(string_id /*name*/, bool /*inherited*/, int /*defval*/, uint_ptr /*css_properties_member_offset*/) const LITEHTML_RETURN_FUNC(0)
 css_length		element::get_length_property		(string_id /*name*/, bool /*inherited*/, css_length /*defval*/, uint_ptr /*css_properties_member_offset*/) const LITEHTML_RETURN_FUNC(0)
 web_color		element::get_color_property			(string_id /*name*/, bool /*inherited*/, web_color /*defval*/, uint_ptr /*css_properties_member_offset*/) const LITEHTML_RETURN_FUNC(web_color())
+gradient		element::get_gradient_property		(string_id /*name*/, bool /*inherited*/, gradient /*defval*/, uint_ptr /*css_properties_member_offset*/) const LITEHTML_RETURN_FUNC(gradient())
 string			element::get_string_property		(string_id /*name*/, bool /*inherited*/, const string& /*defval*/, uint_ptr /*css_properties_member_offset*/) const LITEHTML_RETURN_FUNC("")
 float			element::get_number_property		(string_id /*name*/, bool /*inherited*/, float /*defval*/, uint_ptr /*css_properties_member_offset*/) const LITEHTML_RETURN_FUNC(0)
 string_vector	element::get_string_vector_property	(string_id /*name*/, bool /*inherited*/, const string_vector& /*default_value*/, uint_ptr /*css_properties_member_offset*/) const LITEHTML_RETURN_FUNC({})
