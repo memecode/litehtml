@@ -623,7 +623,7 @@ void style::parse_background(const string& val, const string& baseurl, bool impo
 	int_vector repeats, origins, clips, attachments;
 	length_vector x_positions, y_positions;
 	size_vector sizes;
-	gradient grad;
+	web_gradient grad;
 
 	for (const auto& token : tokens)
 	{
@@ -743,7 +743,7 @@ bool style::parse_one_background(const string& val, document_container* containe
 			{
 				auto arg = gradient[1];
 
-				bg.m_gradient.m_type = gradient::linear_gradient;
+				bg.m_gradient.m_type = web_gradient::linear_gradient;
 
 				string_vector colors;
 				split_string(gradient[1], colors, ", ");

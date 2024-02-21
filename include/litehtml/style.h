@@ -35,7 +35,7 @@ namespace litehtml
 			length_vector	m_length_vector;
 			float			m_number;
 			web_color		m_color;
-			gradient		m_gradient;
+			web_gradient		m_gradient;
 			string			m_string;
 			string_vector	m_string_vector;
 			size_vector		m_size_vector;
@@ -81,7 +81,7 @@ namespace litehtml
 			: m_type(prop_type_color), m_important(important), m_color(color)
 		{
 		}
-		property_value(gradient grad, bool important)
+		property_value(web_gradient grad, bool important)
 			: m_type(prop_type_gradient), m_important(important), m_gradient(grad)
 		{
 		}
@@ -113,7 +113,7 @@ namespace litehtml
 				m_color.~web_color();
 				break;
 			case prop_type_gradient:
-				m_gradient.~gradient();
+				m_gradient.~web_gradient();
 				break;
 			case prop_type_size_vector:
 				m_size_vector.~size_vector();
