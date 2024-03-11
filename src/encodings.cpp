@@ -27,11 +27,11 @@ struct decoder
 	// invalid value of code_point or pointer (in std terminology, pointer is an offset into index table).
 	// it is called null to match the standard.
 	enum { null = -2 };
-	static_assert(null != 0 && null != EOF);
+	static_assert(null != 0 && null != EOF, "");
 
 	// https://encoding.spec.whatwg.org/#index-code-point
 	template<int N>
-	static int index_code_point(int pointer, int(&index)[N])
+	static int index_code_point(int pointer, int (&index)[N])
 	{
 		if (pointer >= 0 && pointer < N)
 			return index[pointer];
@@ -407,9 +407,9 @@ decoder::result single_byte_decoder::handler(string& input, int& index, int ch[2
 
 struct gb18030_decoder : decoder
 {
-	byte m_first = 0;
-	byte m_second = 0;
-	byte m_third = 0;
+	int m_first = 0;
+	int m_second = 0;
+	int m_third = 0;
 	
 	result handler(string& input, int& index, int ch[2]) override;
 
@@ -536,7 +536,7 @@ decoder::result gb18030_decoder::handler(string& input, int& index, int ch[2])
 		}
 		
 		// 2.
-		byte lead = m_first;
+		int lead = m_first;
 		int pointer = null;
 		m_first = 0;
 
@@ -593,7 +593,7 @@ decoder::result gb18030_decoder::handler(string& input, int& index, int ch[2])
 
 struct big5_decoder : decoder
 {
-	byte m_lead = 0;
+	int m_lead = 0;
 	
 	result handler(string& input, int& index, int ch[2]) override;
 
@@ -689,7 +689,7 @@ int jis_decoder::m_jis0212_index[] = {null,null,null,null,null,null,null,null,nu
 
 struct euc_jp_decoder : jis_decoder
 {
-	byte m_lead = 0;
+	int m_lead = 0;
 	bool m_jis0212 = false;
 
 	result handler(string& input, int& index, int ch[2]) override;
@@ -781,24 +781,25 @@ decoder::result euc_jp_decoder::handler(inout string& input, inout int& index, o
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#undef NULL
 
 struct iso_2022_jp_decoder : jis_decoder
 {
 	enum state
 	{
-		state_null,
-		state_ascii,
-		state_roman,
-		state_katakana,
-		state_lead_byte,
-		state_trail_byte,
-		state_escape_start,
-		state_escape
+		NULL,
+		ASCII,
+		ROMAN,
+		KATAKANA,
+		LEAD_BYTE,
+		TRAIL_BYTE,
+		ESCAPE_START,
+		ESCAPE
 	};
 
-	byte  m_lead           = 0;
-	state m_state          = state_ascii;
-	state m_output_state   = state_ascii;
+	int   m_lead           = 0;
+	state m_state          = ASCII;
+	state m_output_state   = ASCII;
 	bool  m_output         = false;
 
 	result handler(string& input, int& index, int ch[2]) override;
@@ -811,10 +812,10 @@ decoder::result iso_2022_jp_decoder::handler(inout string& input, inout int& ind
 
 	switch (m_state)
 	{
-	case state_ascii:
+	case ASCII:
 		if (b == 0x1B)
 		{
-			m_state = state_escape_start;
+			m_state = ESCAPE_START;
 			return result_continue;
 		}
 		else if (b >= 0 && b <= 0x7F && b != 0x0E && b != 0x0F && b != 0x1B)
@@ -834,10 +835,10 @@ decoder::result iso_2022_jp_decoder::handler(inout string& input, inout int& ind
 		}
 		break;
 
-	case state_roman:
+	case ROMAN:
 		if (b == 0x1B)
 		{
-			m_state = state_escape_start;
+			m_state = ESCAPE_START;
 			return result_continue;
 		}
 		else if (b == 0x5C)
@@ -869,10 +870,10 @@ decoder::result iso_2022_jp_decoder::handler(inout string& input, inout int& ind
 		}
 		break;
 
-	case state_katakana:
+	case KATAKANA:
 		if (b == 0x1B)
 		{
-			m_state = state_escape_start;
+			m_state = ESCAPE_START;
 			return result_continue;
 		}
 		else if (b >= 0x21 && b <= 0x5F)
@@ -892,17 +893,17 @@ decoder::result iso_2022_jp_decoder::handler(inout string& input, inout int& ind
 		}
 		break;
 
-	case state_lead_byte:
+	case LEAD_BYTE:
 		if (b == 0x1B)
 		{
-			m_state = state_escape_start;
+			m_state = ESCAPE_START;
 			return result_continue;
 		}
 		else if (b >= 0x21 && b <= 0x7E)
 		{
 			m_output = false;
 			m_lead = b;
-			m_state = state_trail_byte;
+			m_state = TRAIL_BYTE;
 			return result_continue;
 		}
 		else if (b == EOF)
@@ -916,15 +917,15 @@ decoder::result iso_2022_jp_decoder::handler(inout string& input, inout int& ind
 		}
 		break;
 
-	case state_trail_byte:
+	case TRAIL_BYTE:
 		if (b == 0x1B)
 		{
-			m_state = state_escape_start;
+			m_state = ESCAPE_START;
 			return result_error;
 		}
 		else if (b >= 0x21 && b <= 0x7E)
 		{
-			m_state = state_lead_byte;
+			m_state = LEAD_BYTE;
 			int pointer = (m_lead - 0x21) * 94 + b - 0x21;
 			int code_point = index_code_point(pointer, m_jis0208_index);
 			if (code_point == null) return result_error;
@@ -933,22 +934,22 @@ decoder::result iso_2022_jp_decoder::handler(inout string& input, inout int& ind
 		}
 		else if (b == EOF) // same as last else
 		{
-			m_state = state_lead_byte;
+			m_state = LEAD_BYTE;
 			return result_error;
 		}
 		else
 		{
-			m_state = state_lead_byte;
+			m_state = LEAD_BYTE;
 			return result_error;
 		}
 		break;
 
-	case state_escape_start:
+	case ESCAPE_START:
 		// 1.
 		if (b == 0x24 || b == 0x28)
 		{
 			m_lead = b;
-			m_state = state_escape;
+			m_state = ESCAPE;
 			return result_continue;
 		}
 		// 2.
@@ -958,17 +959,17 @@ decoder::result iso_2022_jp_decoder::handler(inout string& input, inout int& ind
 		m_state = m_output_state;
 		return result_error;
 	
-	case state_escape:
+	case ESCAPE:
 		{
 			// 1.
 			int lead = m_lead;
 			m_lead = 0;
 			// 2,3,4,5,6.
-			auto state = state_null;
-			if      (lead == 0x28 && b == 0x42) state = state_ascii;
-			else if (lead == 0x28 && b == 0x4A) state = state_roman;
-			else if (lead == 0x28 && b == 0x49) state = state_katakana;
-			else if (lead == 0x24 && (b == 0x40 || b == 0x42)) state = state_lead_byte;
+			state state = NULL;
+			if      (lead == 0x28 && b == 0x42) state = ASCII;
+			else if (lead == 0x28 && b == 0x4A) state = ROMAN;
+			else if (lead == 0x28 && b == 0x49) state = KATAKANA;
+			else if (lead == 0x24 && (b == 0x40 || b == 0x42)) state = LEAD_BYTE;
 			// 7.
 			if (m_state)
 			{
@@ -979,7 +980,7 @@ decoder::result iso_2022_jp_decoder::handler(inout string& input, inout int& ind
 			}
 			// 8. If byte is end-of-queue, then prepend lead to ioQueue. Otherwise, prepend lead and byte to ioQueue.
 			if (b == EOF)
-				input.insert(index, 1, lead);
+				input.insert(index, 1, (char)lead);
 			else
 				input.insert(index, {(char)lead, (char)b});
 			// 9.
@@ -1000,7 +1001,7 @@ decoder::result iso_2022_jp_decoder::handler(inout string& input, inout int& ind
 
 struct shift_jis_decoder : jis_decoder
 {
-	byte m_lead = 0;
+	int m_lead = 0;
 
 	result handler(string& input, int& index, int ch[2]) override;
 };
@@ -1089,7 +1090,7 @@ decoder::result shift_jis_decoder::handler(inout string& input, inout int& index
 
 struct euc_kr_decoder : decoder
 {
-	byte m_lead = 0;
+	int m_lead = 0;
 
 	result handler(string& input, int& index, int ch[2]) override;
 
@@ -1118,7 +1119,7 @@ decoder::result euc_kr_decoder::handler(inout string& input, inout int& index, o
 	// 3.
 	if (m_lead != 0)
 	{
-		byte lead = m_lead;
+		int lead = m_lead;
 		int pointer = null;
 		m_lead = 0;
 		
@@ -1191,8 +1192,8 @@ decoder::result replacement_decoder::handler(inout string& input, inout int& ind
 
 struct utf_16_decoder : decoder
 {
-	byte m_lead_byte       = 0;
-	int  m_lead_surrogate  = 0;
+	int  m_lead_byte       = null;
+	int  m_lead_surrogate  = null;
 	bool m_utf_16be;
 
 	utf_16_decoder(encoding _encoding) : m_utf_16be(_encoding == encoding::utf_16be) {}
@@ -1206,19 +1207,19 @@ decoder::result utf_16_decoder::handler(inout string& input, inout int& index, o
 	int b = index == (int)input.size() ? EOF : (byte)input[index++]; // read input byte
 
 	// 1. If byte is end-of-queue and either UTF-16 lead byte or UTF-16 lead surrogate is non-null, set UTF-16 lead byte and UTF-16 lead surrogate to null, and return error.
-	if (b == EOF && (m_lead_byte != 0 || m_lead_surrogate != 0))
+	if (b == EOF && (m_lead_byte != null || m_lead_surrogate != null))
 	{
-		m_lead_byte = 0;
-		m_lead_surrogate = 0;
+		m_lead_byte = null;
+		m_lead_surrogate = null;
 		return result_error;
 	}
 
 	// 2. If byte is end-of-queue and UTF-16 lead byte and UTF-16 lead surrogate are null, return finished.
-	if (b == EOF && m_lead_byte == 0 && m_lead_surrogate == 0)
+	if (b == EOF && m_lead_byte == null && m_lead_surrogate == null)
 		return result_finished;
 
 	// 3. If UTF-16 lead byte is null, set UTF-16 lead byte to byte and return continue.
-	if (m_lead_byte == 0)
+	if (m_lead_byte == null)
 	{
 		m_lead_byte = b;
 		return result_continue;
@@ -1226,13 +1227,13 @@ decoder::result utf_16_decoder::handler(inout string& input, inout int& index, o
 
 	// 4.
 	int code_unit = m_utf_16be ? (m_lead_byte << 8) + b : (b << 8) + m_lead_byte;
-	m_lead_byte = 0;
+	m_lead_byte = null;
 
 	// 5.
-	if (m_lead_surrogate != 0)
+	if (m_lead_surrogate != null)
 	{
 		int lead_surrogate = m_lead_surrogate;
-		m_lead_surrogate = 0;
+		m_lead_surrogate = null;
 
 		// 1. If code unit is in the range U+DC00 to U+DFFF, inclusive, return a code point whose value is 0x10000 + ((lead surrogate − 0xD800) << 10) + (code unit − 0xDC00).
 		if (code_unit >= 0xDC00 && code_unit <= 0xDFFF)
@@ -1242,8 +1243,8 @@ decoder::result utf_16_decoder::handler(inout string& input, inout int& index, o
 		}
 		
 		// 2,3.
-		char b1 = code_unit >> 8;
-		char b2 = code_unit & 0xFF;
+		char b1 = char(code_unit >> 8);
+		char b2 = char(code_unit & 0xFF);
 		
 		// 4. Let bytes be two bytes whose values are byte1 and byte2, if is UTF-16BE decoder is true, and byte2 and byte1 otherwise.
 		string bytes = m_utf_16be ? string{b1, b2} : string{b2, b1};
@@ -1637,10 +1638,11 @@ encoding get_encoding(string label)
 	return encoding::null;
 }
 
+const size_t EOL = string::npos;
+
 // https://html.spec.whatwg.org/multipage/urls-and-fetching.html#algorithm-for-extracting-a-character-encoding-from-a-meta-element
 encoding extract_encoding_from_meta_element(string s)
 {
-	const auto EOL = string::npos;
 	lcase(s); // for step 2.
 
 	// 1. Let position be a pointer into s, initially pointing at the start of the string.
@@ -1687,7 +1689,328 @@ loop:
 	return get_encoding(s.substr(pos, end - pos)); // works for end == EOL too
 }
 
+// see step 5 of https://html.spec.whatwg.org/multipage/parsing.html#encoding-sniffing-algorithm
+bool end_condition(size_t index)
+{
+	return index >= 1024;
+}
+
+void increment(size_t& index, const string& str)
+{
+	index++;
+	if (index >= str.size() || end_condition(index))
+		throw 0; // abort prescan
+}
+
+// https://html.spec.whatwg.org/multipage/parsing.html#concept-get-attributes-when-sniffing
+bool prescan_get_attribute(const string& str, inout size_t& index, out string& name, out string& value)
+{
+	// 1.
+	while (is_whitespace(str[index]) || str[index] == '/') increment(index, str);
+
+	// 2.
+	if (str[index] == '>') return false;
+
+	// 3.
+	name = value = "";
+
+	// 4.
+step_4:
+	if (str[index] == '=' && name != "")
+	{
+		increment(index, str);
+		goto process_value;
+	}
+	else if (is_whitespace(str[index]))
+		goto spaces;
+	else if (str[index] == '/' || str[index] == '>')
+		return true;
+	else // A..Z or anything else
+		name += (char)lowcase(str[index]);
+
+	// 5.
+	increment(index, str);
+	goto step_4;
+
+	// 6.
+spaces:
+	while (is_whitespace(str[index])) increment(index, str);
+
+	// 7.
+	if (str[index] != '=')
+		return true;
+
+	// 8.
+	increment(index, str); // skip '='
+
+	// 9.
+process_value:
+	while (is_whitespace(str[index])) increment(index, str);
+
+	// 10.
+	if (str[index] == '"' || str[index] == '\'')
+	{
+		// 1.
+		char b = str[index];
+
+		// 2.
+	quote_loop:
+		increment(index, str);
+
+		// 3.
+		if (str[index] == b)
+		{
+			increment(index, str);
+			return true;
+		}
+
+		// 4,5.
+		else
+			value += (char)lowcase(str[index]);
+
+		// 6.
+		goto quote_loop;
+	}
+	else if (str[index] == '>')
+		return true;
+	else // A..Z or anything else
+		value += (char)lowcase(str[index]);
+
+	// 11.
+step_11:
+	if (is_whitespace(str[index]) || str[index] == '>')
+		return true;
+	else // A..Z or anything else
+		value += (char)lowcase(str[index]);
+
+	// 12.
+	increment(index, str);
+	goto step_11;
+}
+
+template<class T>
+bool contains(const std::vector<T>& vector, const T& item)
+{
+	return std::find(vector.begin(), vector.end(), item) != vector.end();
+}
+bool is_one_of(int x, int a, int b, int c)
+{
+	return x == a || x == b || x == c;
+}
+bool equal_i(const string& s1, const string& s2)
+{
+	if (s1.size() != s2.size()) return false;
+	return t_strncasecmp(s1.c_str(), s2.c_str(), s1.size()) == 0;
+}
+bool match(const string& str, size_t index, const string& substr)
+{
+	return str.substr(index, substr.size()) == substr;
+}
+bool match_i(const string& str, size_t index, const string& substr)
+{
+	return equal_i(str.substr(index, substr.size()), substr);
+}
+int is_letter(int c)
+{
+	return t_isalpha(c);
+}
+
+
+// https://html.spec.whatwg.org/multipage/parsing.html#prescan-a-byte-stream-to-determine-its-encoding
+encoding prescan_a_byte_stream_to_determine_its_encoding(const string& str)
+{
+	// 1. Let fallback encoding be null. - bogus, never used
+	// 2. Let position be a pointer to a byte in the input byte stream, initially pointing at the first byte.
+	size_t index = 0;
+
+	// 3. Prescan for UTF-16 XML declarations:
+	if (match(str, index, {"<\0?\0x\0", 6})) return encoding::utf_16le;
+	if (match(str, index, {"\0<\0?\0x", 6})) return encoding::utf_16be;
+
+	// 4.
+loop:
+	if (match(str, index, "<!--"))
+	{
+		index = str.find("-->", index);
+		if (index == EOL || end_condition(index)) throw 0; // abort prescan
+		index += 2; // not 3 because it will be incremented one more time in step 5 (next_byte)
+	}
+	else if (match_i(str, index, "<meta") && (is_whitespace(str[index + 5]) || str[index + 5] == '/'))
+	{
+		// 1.
+		// NOTE: Should be 6, but the standard says 5. It doesn't really matter because prescan_get_attribute will skip the WS or / anyway.
+		index += 5; 
+		// 2,3,4,5.
+		string_vector attribute_list;
+		bool got_pragma = false;
+		int need_pragma = -1; // three values: -1 ("null"), true and false
+		encoding charset = encoding::null;
+			
+		// 6.
+	attributes:
+		string attr_name, attr_value;
+		if (!prescan_get_attribute(str, index, attr_name, attr_value))
+			goto processing;
+			
+		// 7. If the attribute's name is already in attribute list, then return to the step labeled attributes.
+		if (contains(attribute_list, attr_name))
+			goto attributes;
+
+		// 8.
+		attribute_list.push_back(attr_name);
+
+		// 9.
+		// NOTE: attr_name and attr_value are already lowcased, see prescan_get_attribute
+		if (attr_name == "http-equiv" && attr_value == "content-type") 
+		{
+			got_pragma = true;
+		}
+		else if (attr_name == "content")
+		{
+			auto encoding = extract_encoding_from_meta_element(attr_value);
+			// If a character encoding is returned, and if charset is still set to null
+			if (encoding != encoding::null && charset == encoding::null)
+			{
+				charset = encoding;
+				need_pragma = true;
+			}
+		}
+		else if (attr_name == "charset")
+		{
+			charset = get_encoding(attr_value);
+			need_pragma = false;
+		}
+
+		// 10.
+		goto attributes;
+
+		// 11. Processing: If need pragma is null, then jump to the step below labeled next byte.
+	processing:
+		if (need_pragma == -1)
+			goto next_byte;
+			
+		// 12.
+		if (need_pragma == (int)true && !got_pragma)
+			goto next_byte;
+
+		// 13.
+		if (charset == encoding::null)
+			goto next_byte;
+
+		// 14.
+		if (charset == encoding::utf_16be || charset == encoding::utf_16le)
+			charset = encoding::utf_8;
+
+		// 15.
+		if (charset == encoding::x_user_defined)
+			charset = encoding::windows_1252;
+
+		// 16.
+		return charset;
+	}
+	else if ((str[index] == '<' && str[index + 1] == '/' && is_letter(str[index + 2])) ||
+		(str[index] == '<' && is_letter(str[index + 1])))
+	{
+		// 1.
+		index = str.find_first_of(" \t\r\n\f>", index);
+		if (index == EOL || end_condition(index)) throw 0; // abort prescan
+			
+		// 2.
+		string tmp;
+		while (prescan_get_attribute(str, index, tmp, tmp)) {}
+		goto next_byte;
+	}
+	else if (str[index] == '<' && is_one_of(str[index + 1], '!', '/', '?'))
+	{
+		index = str.find('>', index);
+		if (index == EOL || end_condition(index)) throw 0; // abort prescan
+	}
+
+	// 5.
+next_byte:
+	increment(index, str);
+	goto loop;
+}
+
+// https://html.spec.whatwg.org/multipage/parsing.html#concept-get-xml-encoding-when-sniffing
+encoding get_xml_encoding(const string& str)
+{
+	// 1. Let encodingPosition be a pointer to the start of the stream.
+	size_t index = 0;
+
+	// 2.
+	if (!match(str, index, "<?xml"))
+		return encoding::null;
+
+	// 3.
+	// NOTE: xmlDeclarationEnd is unused
+	index = str.find('>', index);
+	if (index == EOL) return encoding::null;
+
+	// 4.
+	index = str.find("encoding", index);
+	if (index == EOL) return encoding::null;
+
+	// 5.
+	index += strlen("encoding");
+
+	// 6.
+	while ((byte)str[index] <= 0x20) index++;
+
+	// 7.
+	if (str[index] != '=') return encoding::null;
+
+	// 8.
+	index++; // skip '='
+
+	// 9.
+	while ((byte)str[index] <= 0x20) index++;
+
+	// 10. Let quoteMark be the byte at encodingPosition.
+	char q = str[index];
+
+	// 11.
+	if (q != '"' && q != '\'') return encoding::null;
+
+	// 12.
+	index++; // skip q
+
+	// 13. Let encodingEndPosition be the position of the next occurrence of quoteMark
+	size_t end = str.find(q, index);
+	if (index == EOL) return encoding::null;
+
+	// 14.
+	string potentialEncoding = str.substr(index, end - index);
+
+	// 15.
+	for(byte ch: potentialEncoding) if (ch <= 0x20) return encoding::null;
+
+	// 16.
+	// NOTE: all encoding labels are pure ASCII, no need to do isomorphic decoding
+	encoding encoding = get_encoding(potentialEncoding);
+
+	// 17.
+	if (encoding == encoding::utf_16be || encoding == encoding::utf_16le)
+		encoding = encoding::utf_8;
+
+	// 18.
+	return encoding;
+}
+
+// https://html.spec.whatwg.org/multipage/parsing.html#prescan-a-byte-stream-to-determine-its-encoding
+encoding prescan_for_encoding(const string& str)
+{
+	try {
+		return prescan_a_byte_stream_to_determine_its_encoding(str);
+	}
+	catch (int)
+	{
+		return get_xml_encoding(str);
+	}
+}
+
 // https://html.spec.whatwg.org/multipage/parsing.html#encoding-sniffing-algorithm
+// see also doc/document_createFromString.txt
 void encoding_sniffing_algorithm(estring& str)
 {
 	// 1. If the result of BOM sniffing is an encoding, return that encoding with confidence certain.
@@ -1705,10 +2028,19 @@ void encoding_sniffing_algorithm(estring& str)
 
 	// 4. HTTP encoding -> return { encoding, confidence: certain}
 
+	if (str.encoding != encoding::null && str.confidence == confidence::certain)
+		return;
+
 		//    all below return confidence: tentative
 
 	// 5. Optionally prescan the byte stream to determine its encoding -> return { encoding, confidence: tentative}
-	//    NOT IMPLEMENTED
+	encoding = prescan_for_encoding(str);
+	if (encoding != encoding::null)
+	{
+		str.encoding = encoding;
+		str.confidence = confidence::tentative;
+		return;
+	}
 
 	// 6. encoding from parent document
 
@@ -1725,6 +2057,7 @@ void encoding_sniffing_algorithm(estring& str)
 		str.encoding = encoding::utf_8;
 		str.confidence = confidence::tentative; // tentative means it will be overriden by <meta> encoding if present
 	}
+	// otherwise use str.encoding (tentative)
 }
 
 } // namespace litehtml
